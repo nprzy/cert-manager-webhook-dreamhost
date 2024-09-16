@@ -2,13 +2,12 @@
   <img src="https://raw.githubusercontent.com/cert-manager/cert-manager/d53c0b9270f8cd90d908460d69502694e1838f5f/logo/logo-small.png" height="256" width="256" alt="cert-manager project logo" />
 </p>
 
-# ACME webhook example
+# DreamHost `cert-manager` ACME Webhook Solver
 
-The ACME issuer type supports an optional 'webhook' solver, which can be used
-to implement custom DNS01 challenge solving logic.
+**Work in Progress**
 
-This is useful if you need to use cert-manager with a DNS provider that is not
-officially supported in cert-manager core.
+This project is intended to be an ACME DNS01 webhook solver for
+[cert-manager](https://cert-manager.io/). It is not yet ready for use.
 
 ## Why not in core?
 
@@ -24,19 +23,6 @@ those up themselves as 'extensions' to cert-manager.
 We can also then provide a standardised 'testing framework', or set of
 conformance tests, which allow us to validate that a DNS provider works as
 expected.
-
-## Creating your own webhook
-
-Webhook's themselves are deployed as Kubernetes API services, in order to allow
-administrators to restrict access to webhooks with Kubernetes RBAC.
-
-This is important, as otherwise it'd be possible for anyone with access to your
-webhook to complete ACME challenge validations and obtain certificates.
-
-To make the set up of these webhook's easier, we provide a template repository
-that can be used to get started quickly.
-
-### Creating your own repository
 
 ### Running the test suite
 
