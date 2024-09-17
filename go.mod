@@ -1,4 +1,4 @@
-module github.com/cert-manager/webhook-example
+module github.com/nprzy/cert-manager-webhook-dreamhost
 
 go 1.22.0
 
