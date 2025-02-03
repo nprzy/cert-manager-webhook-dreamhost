@@ -1,0 +1,6 @@
+{
+  "dreamhostApiKeyRef": {
+    "name": "test-secret",
+    "key": "secret"
+  }
+}

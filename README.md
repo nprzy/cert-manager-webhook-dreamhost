@@ -9,36 +9,22 @@
 This project is intended to be an ACME DNS01 webhook solver for
 [cert-manager](https://cert-manager.io/). It is not yet ready for use.
 
-## Why not in core?
-
-As the project & adoption has grown, there has been an influx of DNS provider
-pull requests to our core codebase. As this number has grown, the test matrix
-has become un-maintainable and so, it's not possible for us to certify that
-providers work to a sufficient level.
-
-By creating this 'interface' between cert-manager and DNS providers, we allow
-users to quickly iterate and test out new integrations, and then packaging
-those up themselves as 'extensions' to cert-manager.
-
-We can also then provide a standardised 'testing framework', or set of
-conformance tests, which allow us to validate that a DNS provider works as
-expected.
-
 ### Running the test suite
 
-All DNS providers **must** run the DNS01 provider conformance testing suite,
-else they will have undetermined behaviour when used with cert-manager.
-
-**It is essential that you configure and run the test suite when creating a
-DNS01 webhook.**
-
-An example Go test file has been provided in [main_test.go](https://github.com/cert-manager/webhook-example/blob/master/main_test.go).
-
-You can run the test suite with:
+You can run the test suite against local API/DNS mocks with:
 
 ```bash
-$ TEST_ZONE_NAME=example.com. make test
+$ make test
 ```
 
-The example file has a number of areas you must fill in and replace with your
-own options in order for tests to pass.
+To run against the real DreamHost API, edit `testdata/dreamhost-solver/secret.yaml`
+and include your real API key. Then run the tests with additional environment variables.
+Replace `subdomain.example.com.` with the actual domain name you want to test. The top
+level domain must be something that is actually registered with your DreamHost account.
+The IP address specified here for `TEST_DNS_SERVER` is the IP address resolved from
+`ns1.dreamhost.com`. It's specified directly here to reduce DNS propagation delay. If
+that IP ever changes you may need to update the command.
+
+```bash
+$ TEST_API_URL=https://api.dreamhost.com/ TEST_DNS_SERVER=162.159.26.14:53 TEST_ZONE_NAME=subdomain.example.com. make test
+```

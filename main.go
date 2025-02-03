@@ -1,8 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+	"github.com/nprzy/cert-manager-webhook-dreamhost/internal/dreamhost"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 	"os"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -34,13 +41,8 @@ func main() {
 // To do so, it must implement the `github.com/cert-manager/cert-manager/pkg/acme/webhook.Solver`
 // interface.
 type dreamHostDnsProviderSolver struct {
-	// If a Kubernetes 'clientset' is needed, you must:
-	// 1. uncomment the additional `client` field in this structure below
-	// 2. uncomment the "k8s.io/client-go/kubernetes" import at the top of the file
-	// 3. uncomment the relevant code in the Initialize method below
-	// 4. ensure your webhook's service account has the required RBAC role
-	//    assigned to it for interacting with the Kubernetes APIs you need.
-	//client kubernetes.Clientset
+	baseUrl string
+	client  kubernetes.Clientset
 }
 
 // dreamHostDnsProviderConfig is a structure that is used to decode into when
@@ -58,13 +60,9 @@ type dreamHostDnsProviderSolver struct {
 // be used by your provider here, you should reference a Kubernetes Secret
 // resource and fetch these credentials using a Kubernetes clientset.
 type dreamHostDnsProviderConfig struct {
-	// Change the two fields below according to the format of the configuration
-	// to be decoded.
 	// These fields will be set by users in the
 	// `issuer.spec.acme.dns01.providers.webhook.config` field.
-
-	//Email           string `json:"email"`
-	//APIKeySecretRef v1alpha1.SecretKeySelector `json:"apiKeySecretRef"`
+	APIKeySecretRef cmmeta.SecretKeySelector `json:"dreamhostApiKeyRef"`
 }
 
 // Name is used as the name for this DNS solver when referencing it on the ACME
@@ -83,15 +81,22 @@ func (c *dreamHostDnsProviderSolver) Name() string {
 // cert-manager itself will later perform a self check to ensure that the
 // solver has correctly configured the DNS provider.
 func (c *dreamHostDnsProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
-	cfg, err := loadConfig(ch.Config)
+	klog.Infof("Attempting to create TXT record %v with value %v", ch.ResolvedFQDN, ch.Key)
+
+	client, err := c.loadDreamhostClient(ch)
 	if err != nil {
-		return err
+		klog.Errorf("Failed to create Dream Host client: %v", err)
+		return errors.Wrapf(err, "Failed to create Dream Host client")
 	}
 
-	// TODO: do something more useful with the decoded configuration
-	fmt.Printf("Decoded configuration %v", cfg)
+	name := trimTrailingDot(ch.ResolvedFQDN)
+	err = client.CreateRecord(dreamhost.DNSRecordValue{Name: name, RecordType: "TXT", Value: ch.Key}, "")
+	if err != nil {
+		klog.Errorf("Dreamhost client failed to create DNS record: %v", err)
+		return errors.Wrapf(err, "Dreamhost client failed to create DNS record")
+	}
 
-	// TODO: add code that sets a record in the DNS provider's console
+	klog.Infof("Created TXT record %v with value %v", ch.ResolvedFQDN, ch.Key)
 	return nil
 }
 
@@ -102,7 +107,22 @@ func (c *dreamHostDnsProviderSolver) Present(ch *v1alpha1.ChallengeRequest) erro
 // This is in order to facilitate multiple DNS validations for the same domain
 // concurrently.
 func (c *dreamHostDnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
-	// TODO: add code that deletes a record from the DNS provider's console
+	klog.Infof("Attempting to delete TXT record %v with value %v", ch.ResolvedFQDN, ch.Key)
+
+	client, err := c.loadDreamhostClient(ch)
+	if err != nil {
+		klog.Errorf("Failed to create Dream Host client: %v", err)
+		return errors.Wrapf(err, "Failed to create Dream Host client")
+	}
+
+	name := trimTrailingDot(ch.ResolvedFQDN)
+	err = client.DeleteRecord(dreamhost.DNSRecordValue{Name: name, RecordType: "TXT", Value: ch.Key}, "")
+	if err != nil {
+		klog.Errorf("Dreamhost client failed to delete DNS record: %v", err)
+		return errors.Wrapf(err, "Dreamhost client failed to delete DNS record")
+	}
+
+	klog.Infof("Deleted TXT record %v with value %v", ch.ResolvedFQDN, ch.Key)
 	return nil
 }
 
@@ -116,18 +136,44 @@ func (c *dreamHostDnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) erro
 // The stopCh can be used to handle early termination of the webhook, in cases
 // where a SIGTERM or similar signal is sent to the webhook process.
 func (c *dreamHostDnsProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
-	///// UNCOMMENT THE BELOW CODE TO MAKE A KUBERNETES CLIENTSET AVAILABLE TO
-	///// YOUR CUSTOM DNS PROVIDER
+	cl, err := kubernetes.NewForConfig(kubeClientConfig)
+	if err != nil {
+		return err
+	}
 
-	//cl, err := kubernetes.NewForConfig(kubeClientConfig)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//c.client = cl
-
-	///// END OF CODE TO MAKE KUBERNETES CLIENTSET AVAILABLE
+	c.client = *cl
 	return nil
+}
+
+func (c *dreamHostDnsProviderSolver) loadDreamhostClient(ch *v1alpha1.ChallengeRequest) (*dreamhost.DNSClient, error) {
+	cfg, err := loadConfig(ch.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	secretName := cfg.APIKeySecretRef.LocalObjectReference.Name
+	namespace := ch.ResourceNamespace
+
+	secret, err := c.client.CoreV1().Secrets(namespace).Get(context.Background(), secretName, metav1.GetOptions{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed to load secret %v %q", secretName, namespace+"/"+secretName)
+	}
+
+	data, ok := secret.Data[cfg.APIKeySecretRef.Key]
+	if !ok {
+		return nil, fmt.Errorf("key %q not found in secret \"%s/%s\"", cfg.APIKeySecretRef.Key,
+			cfg.APIKeySecretRef.LocalObjectReference.Name, namespace)
+	}
+	apiKey := string(data)
+	return dreamhost.NewClient(apiKey, nil, c.baseUrl)
+}
+
+// Remove the trailing "." from a string
+func trimTrailingDot(name string) string {
+	if string(name[len(name)-1:]) == "." {
+		return name[:len(name)-1]
+	}
+	return name
 }
 
 // loadConfig is a small helper function that decodes JSON configuration into
