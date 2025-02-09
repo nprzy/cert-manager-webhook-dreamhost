@@ -13,8 +13,8 @@ certManager:
   serviceAccountName: cert-manager
 
 image:
-  repository: mycompany/webhook-image
-  tag: latest
+  repository: ghcr.io/nprzy/cert-manager-webhook-dreamhost
+  tag: 0.1.0
   pullPolicy: IfNotPresent
 
 nameOverride: ""
