@@ -53,6 +53,51 @@ subjects:
     name: {{ include "dreamhost-webhook.fullname" . }}
     namespace: {{ .Release.Namespace }}
 ---
+# Create a role that grants webhook-dreamhost permission to the
+# resources it needs to function.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "dreamhost-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ include "dreamhost-webhook.name" . }}
+    chart: {{ include "dreamhost-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+rules:
+- apiGroups:
+    - ''
+  resources:
+    - 'secrets'
+  {{- if .Values.secretResourceName }}
+  resourceNames:
+    - {{ .Values.secretResourceName | quote }}
+  {{- end }}
+  verbs:
+    - 'get'
+---
+# Bind the above webhook-dreamhost role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "dreamhost-webhook.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ include "dreamhost-webhook.name" . }}
+    chart: {{ include "dreamhost-webhook.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "dreamhost-webhook.fullname" . }}
+subjects:
+  - apiGroup: ""
+    kind: ServiceAccount
+    name: {{ include "dreamhost-webhook.fullname" . }}
+    namespace: {{ .Release.Namespace }}
+---
 # Grant cert-manager permission to validate using our apiserver
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
