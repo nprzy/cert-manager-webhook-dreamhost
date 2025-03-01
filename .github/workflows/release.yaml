@@ -11,6 +11,9 @@ on:
     tags:
       - 'v*'
   pull_request:
+    types:
+      - opened
+      - synchronize
     branches:
       - 'master'
 
@@ -19,16 +22,124 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
-# There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: test coverage
+        run: make coverage-report
+
+      - name: upload coverage profile artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage.out
+          path: _test/coverage.out
+          if-no-files-found: error
+
+      - name: upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage.html
+          path: _test/test-coverage.html
+          if-no-files-found: error
+
+      - name: download breakdown artifact
+        id: download-breakdown
+        uses: dawidd6/action-download-artifact@v9
+        with:
+          branch: master
+          workflow_conclusion: success
+          name: breakdown
+          if_no_artifact_found: ignore
+
+      - name: check test coverage
+        id: coverage
+        uses: vladopajic/go-test-coverage@v2
+        continue-on-error: true # Should fail after coverage comment is posted
+        with:
+          config: ./.testcoverage.yml
+          diff-base-breakdown-file-name: ${{ steps.download-breakdown.outputs.found_artifact == 'true' && 'breakdown' || '' }}
+
+      - name: upload new breakdown artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
+        with:
+          name: breakdown
+          path: _test/breakdown
+          if-no-files-found: ignore
+
+      - name: write coverage summary
+        run: |
+          echo "go-test-coverage report:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo '${{ fromJSON(steps.coverage.outputs.report) }}' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: post coverage report
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          comment-tag: coverage-report
+          message: |
+            go-test-coverage report:
+            ```
+            ${{ fromJSON(steps.coverage.outputs.report) }}```
+
+      - name: download previous helm chart
+        id: download-helm-chart
+        uses: dawidd6/action-download-artifact@v9
+        with:
+          branch: master
+          workflow_conclusion: success
+          name: rendered-manifest.yaml
+          if_no_artifact_found: ignore
+
+      - name: test render helm chart
+        run: make rendered-manifest.yaml
+
+      - name: diff new and old rendered-manifest.yaml
+        if: ${{ steps.download-helm-chart.outputs.found_artifact == 'true' }}
+        run: diff -Nau rendered-manifest.yaml _out/rendered-manifest.yaml > _test/rendered-manifest.yaml.diff
+
+      - name: upload rendered-manifest.yaml diff
+        if: ${{ steps.download-helm-chart.outputs.found_artifact == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-manifest.yaml.diff
+          path: _test/rendered-manifest.yaml.diff
+          if-no-files-found: ignore
+
+      - name: upload rendered-manifest.yaml artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-manifest.yaml
+          path: _out/rendered-manifest.yaml
+          if-no-files-found: ignore
+
+      - name: assert sufficient coverage
+        if: steps.coverage.outcome == 'failure'
+        shell: bash
+        run: echo "coverage check failed" && exit 1
+
   build-and-push-image:
     runs-on: ubuntu-latest
-    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
       contents: read
       packages: write
       attestations: write
       id-token: write
+    needs: ['test']
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
