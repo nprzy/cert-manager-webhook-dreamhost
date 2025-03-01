@@ -2,20 +2,16 @@ package dreamhost
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
 func TestNewClientWithMinimalArgs(t *testing.T) {
 	c, err := NewClient("test123", nil, "")
-	if err != nil {
-		t.Errorf("expected NewClient err to be nil, got %v", err)
-	}
-	if c == nil {
-		t.Error("expected NewClient DNSClient not to be nil, got nil")
-	}
+	assert.Nil(t, err, "expect NewClient err to be nil")
+	assert.NotNil(t, c, "expect NewClient DNSClient not to be nil")
 	if actual := c.BaseURL.String(); actual != dreamhostBaseUrl {
 		t.Errorf("expected BaseURL to be %v, got %v", dreamhostBaseUrl, actual)
 	}
@@ -23,22 +19,14 @@ func TestNewClientWithMinimalArgs(t *testing.T) {
 
 func TestNewClientWithEmptyApiKey(t *testing.T) {
 	c, err := NewClient("", nil, "")
-	if err == nil {
-		t.Error("expected NewClient to return err, got nil")
-	}
-	if c != nil {
-		t.Error("expected NewClient DNSClient to be nil, was not nil")
-	}
+	assert.Error(t, err, "expect NewClient err to be an error")
+	assert.Nil(t, c, "expect NewClient DNSClient to be nil")
 }
 
 func TestNewClientWithInvalidUrl(t *testing.T) {
 	c, err := NewClient("test123", nil, "\x7f")
-	if err == nil {
-		t.Error("expected NewClient to return err, got nil")
-	}
-	if c != nil {
-		t.Error("expected NewClient DNSClient to be nil, was not nil")
-	}
+	assert.Error(t, err, "expect NewClient err to be an error")
+	assert.Nil(t, c, "expect NewClient DNSClient to be nil")
 }
 
 func TestCreateRecord(t *testing.T) {
@@ -47,43 +35,23 @@ func TestCreateRecord(t *testing.T) {
 	recordValue := DNSRecordValue{"example.com", "TXT", "testValue"}
 
 	svr := mockHttpResponse(200, `{"result":"success","data":"record_added"}`, func(r *http.Request) {
-		if r.UserAgent() != agentString {
-			t.Errorf("Expected user agent to be %v, got %v", agentString, r.URL.Scheme)
-		}
+		assert.Equal(t, agentString, r.UserAgent(), "expect user agent string to be correct")
 		q := r.URL.Query()
-		if actual := q.Get("key"); actual != apiKey {
-			t.Errorf("Expected key to be %v, got %v", apiKey, actual)
-		}
-		if actual := q.Get("cmd"); actual != expectedCmd {
-			t.Errorf("Expected cmd to be %v, got %v", expectedCmd, actual)
-		}
-		if actual := q.Get("format"); actual != "json" {
-			t.Errorf("Expected format to be json, got %v", actual)
-		}
-		if actual := q.Get("record"); actual != recordValue.Name {
-			t.Errorf("Expected record to be %v, got %v", recordValue.Name, actual)
-		}
-		if actual := q.Get("type"); actual != recordValue.RecordType {
-			t.Errorf("Expected type to be %v, got %v", recordValue.RecordType, actual)
-		}
-		if actual := q.Get("value"); actual != recordValue.Value {
-			t.Errorf("Expected value to be %v, got %v", recordValue.Value, actual)
-		}
-		if q.Has("unique_id") {
-			t.Errorf("Expected unique_id to not be present, got %v", q.Get("unique_id"))
-		}
+		assert.Equal(t, apiKey, q.Get("key"), "expect request to have the desired API key")
+		assert.Equal(t, expectedCmd, q.Get("cmd"), "expect request to have the desired command")
+		assert.Equal(t, "json", q.Get("format"), "expect request to have the desired format")
+		assert.Equal(t, recordValue.Name, q.Get("record"), "expect request to reference the desired record name")
+		assert.Equal(t, recordValue.RecordType, q.Get("type"), "expect request to reference the desired record type")
+		assert.Equal(t, recordValue.Value, q.Get("value"), "expect request to reference the desired value")
+		assert.Falsef(t, q.Has("unique_id"), "expect unique_id to not be present. Got %v", q.Get("unique_id"))
 	})
 	defer svr.Close()
 
 	c, err := NewClient(apiKey, nil, svr.URL)
-	if err != nil {
-		t.Errorf("expected NewClient err to be nil, got %v", err)
-	}
+	assert.Nil(t, err, "expect NewClient err to be nil")
 
 	err = c.CreateRecord(recordValue, "")
-	if err != nil {
-		t.Errorf("Expected CreateRecord not to return error, got %v", err)
-	}
+	assert.Nil(t, err, "expect CreateRecord err to be nil")
 }
 
 func TestDeleteRecord(t *testing.T) {
@@ -92,43 +60,23 @@ func TestDeleteRecord(t *testing.T) {
 	recordValue := DNSRecordValue{"example.com", "TXT", "testValue"}
 
 	svr := mockHttpResponse(200, `{"data":"record_removed","result":"success"}`, func(r *http.Request) {
-		if r.UserAgent() != agentString {
-			t.Errorf("Expected user agent to be %v, got %v", agentString, r.URL.Scheme)
-		}
+		assert.Equal(t, agentString, r.UserAgent(), "expect user agent string to be correct")
 		q := r.URL.Query()
-		if actual := q.Get("key"); actual != apiKey {
-			t.Errorf("Expected key to be %v, got %v", apiKey, actual)
-		}
-		if actual := q.Get("cmd"); actual != expectedCmd {
-			t.Errorf("Expected cmd to be %v, got %v", expectedCmd, actual)
-		}
-		if actual := q.Get("format"); actual != "json" {
-			t.Errorf("Expected format to be json, got %v", actual)
-		}
-		if actual := q.Get("record"); actual != recordValue.Name {
-			t.Errorf("Expected record to be %v, got %v", recordValue.Name, actual)
-		}
-		if actual := q.Get("type"); actual != recordValue.RecordType {
-			t.Errorf("Expected type to be %v, got %v", recordValue.RecordType, actual)
-		}
-		if actual := q.Get("value"); actual != recordValue.Value {
-			t.Errorf("Expected value to be %v, got %v", recordValue.Value, actual)
-		}
-		if q.Has("unique_id") {
-			t.Errorf("Expected unique_id to not be present, got %v", q.Get("unique_id"))
-		}
+		assert.Equal(t, apiKey, q.Get("key"), "expect request to have the desired API key")
+		assert.Equal(t, expectedCmd, q.Get("cmd"), "expect request to have the desired command")
+		assert.Equal(t, "json", q.Get("format"), "expect request to have the desired format")
+		assert.Equal(t, recordValue.Name, q.Get("record"), "expect request to reference the desired record name")
+		assert.Equal(t, recordValue.RecordType, q.Get("type"), "expect request to reference the desired record type")
+		assert.Equal(t, recordValue.Value, q.Get("value"), "expect request to reference the desired value")
+		assert.Falsef(t, q.Has("unique_id"), "expect unique_id to not be present. Got %v", q.Get("unique_id"))
 	})
 	defer svr.Close()
 
 	c, err := NewClient(apiKey, nil, svr.URL)
-	if err != nil {
-		t.Errorf("expected NewClient err to be nil, got %v", err)
-	}
+	assert.Nil(t, err, "expect NewClient err to be nil")
 
 	err = c.DeleteRecord(recordValue, "")
-	if err != nil {
-		t.Errorf("Expected DeleteRecord not to return error, got %v", err)
-	}
+	assert.Nil(t, err, "expect DeleteRecord err to be nil")
 }
 
 func TestCreateRecordWithUniqueId(t *testing.T) {
@@ -143,24 +91,21 @@ func TestCreateRecordWithUniqueId(t *testing.T) {
 	defer svr.Close()
 
 	c, err := NewClient("apikey123", nil, svr.URL)
-	if err != nil {
-		t.Errorf("expected NewClient err to be nil, got %v", err)
-	}
+	assert.Nil(t, err, "expect NewClient err to be nil")
 
 	err = c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, uniqueId)
-	if err != nil {
-		t.Errorf("Expected CreateRecord not to return error, got %v", err)
-	}
+	assert.Nil(t, err, "expect CreateRecord err to be nil")
 }
 
 func TestCreateRecordWithRepeatUniqueId(t *testing.T) {
 	svr := mockHttpResponse(200, `{"data":"unique_id_already_used","result":"error"}`, nil)
 	defer svr.Close()
 
-	c, _ := NewClient("apikey123", nil, svr.URL)
-	if err := c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, "unique123"); err != nil {
-		t.Errorf("Expected CreateRecord not to return error, got %v", err)
-	}
+	c, err := NewClient("apikey123", nil, svr.URL)
+	assert.Nil(t, err, "expect NewClient err to be nil")
+
+	err = c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, "unique123")
+	assert.Nil(t, err, "expect CreateRecord err to be nil")
 }
 
 func TestCreateRecord500Error(t *testing.T) {
@@ -170,12 +115,11 @@ func TestCreateRecord500Error(t *testing.T) {
 	svr := mockHttpResponse(500, `{"result":"success","data":"record_added"}`, nil)
 	defer svr.Close()
 
-	c, _ := NewClient("testApiKey", nil, svr.URL)
-	if err := c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, ""); err == nil {
-		t.Error("Expected CreateRecord to return error, got nil")
-	} else if !strings.Contains(err.Error(), expectedErrContent) {
-		t.Errorf("Expected err to contain %v, but was %v instead", expectedErrContent, err.Error())
-	}
+	c, err := NewClient("testApiKey", nil, svr.URL)
+	assert.Nil(t, err, "expect NewClient err to be nil")
+
+	err = c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, "")
+	assert.ErrorContains(t, err, expectedErrContent, "expect CreateRecord to return expected error")
 }
 
 func TestCreateRecordInvalidResponse(t *testing.T) {
@@ -185,12 +129,11 @@ func TestCreateRecordInvalidResponse(t *testing.T) {
 	svr := mockHttpResponse(200, "invalid", nil)
 	defer svr.Close()
 
-	c, _ := NewClient("testApiKey", nil, svr.URL)
-	if err := c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, ""); err == nil {
-		t.Error("Expected CreateRecord to return error, got nil")
-	} else if !strings.Contains(err.Error(), expectedErrContent) {
-		t.Errorf("Expected err to contain %v, but was %v instead", expectedErrContent, err.Error())
-	}
+	c, err := NewClient("testApiKey", nil, svr.URL)
+	assert.Nil(t, err, "expect NewClient err to be nil")
+
+	err = c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, "")
+	assert.ErrorContains(t, err, expectedErrContent, "expect CreateRecord to return expected error")
 }
 
 func TestCreateRecordConnectionError(t *testing.T) {
@@ -200,12 +143,11 @@ func TestCreateRecordConnectionError(t *testing.T) {
 	// Close the server before we make the test request so that the client TCP connection gets rejected
 	svr.Close()
 
-	c, _ := NewClient("testApiKey", nil, svr.URL)
-	if err := c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, ""); err == nil {
-		t.Error("Expected CreateRecord to return error, got nil")
-	} else if !strings.Contains(err.Error(), expectedErrContent) {
-		t.Errorf("Expected err to contain %v, but was %v instead", expectedErrContent, err.Error())
-	}
+	c, err := NewClient("testApiKey", nil, svr.URL)
+	assert.Nil(t, err, "expect NewClient err to be nil")
+
+	err = c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, "")
+	assert.ErrorContains(t, err, expectedErrContent, "expect CreateRecord to return expected error")
 }
 
 func TestCreateRecordErrorResponse(t *testing.T) {
@@ -215,19 +157,16 @@ func TestCreateRecordErrorResponse(t *testing.T) {
 	svr := mockHttpResponse(200, `{"result":"error","data":"record_already_exists_remove_first"}`, nil)
 	defer svr.Close()
 
-	c, _ := NewClient("testApiKey", nil, svr.URL)
-	if err := c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, ""); err == nil {
-		t.Error("Expected CreateRecord to return error, got nil")
-	} else if !strings.Contains(err.Error(), expectedErrContent) {
-		t.Errorf("Expected err to contain %v, but was %v instead", expectedErrContent, err.Error())
-	}
+	c, err := NewClient("testApiKey", nil, svr.URL)
+	assert.Nil(t, err, "expect NewClient err to be nil")
+
+	err = c.CreateRecord(DNSRecordValue{"example.com", "TXT", "testValue"}, "")
+	assert.ErrorContains(t, err, expectedErrContent, "expect CreateRecord to return expected error")
 }
 
 func TestCreateRecordReturnsErrorWhenInputsAreMissing(t *testing.T) {
 	c, err := NewClient("test123", nil, "")
-	if err != nil {
-		t.Errorf("expected NewClient err to be nil, got %v", err)
-	}
+	assert.Nil(t, err, "expect NewClient err to be nil")
 
 	cases := map[DNSRecordValue]string{
 		DNSRecordValue{"", "TXT", "testValue"}:         "DNSRecordValue.Name must not be empty",
@@ -237,9 +176,7 @@ func TestCreateRecordReturnsErrorWhenInputsAreMissing(t *testing.T) {
 
 	for record, expectedError := range cases {
 		err = c.CreateRecord(record, "abc123")
-		if err == nil || !strings.Contains(err.Error(), expectedError) {
-			t.Errorf("Expected CreateRecord to return error `%v`, but it was %v instead", expectedError, err)
-		}
+		assert.ErrorContains(t, err, expectedError, "expect CreateRecord to return expected error")
 	}
 }
 
@@ -249,7 +186,7 @@ func mockHttpResponse(status int, body string, validator func(*http.Request)) *h
 			validator(r)
 		}
 		w.WriteHeader(status)
-		_, err := fmt.Fprintf(w, body)
+		_, err := fmt.Fprint(w, body)
 		if err != nil {
 			panic(err)
 		}

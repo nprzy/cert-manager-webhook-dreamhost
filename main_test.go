@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/nprzy/cert-manager-webhook-dreamhost/internal/solvertest"
+	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -28,12 +29,8 @@ func TestRunsSuite(t *testing.T) {
 
 	apisvr := mockHttpResponse(200, `{"result":"success","data":"record_added"}`, func(r *http.Request) {
 		q := r.URL.Query()
-		if actual := q.Get("key"); actual != expectedKey {
-			t.Errorf("Expected key to be %v, got %v", expectedKey, actual)
-		}
-		if actual := q.Get("type"); actual != "TXT" {
-			t.Errorf("Expected type to be TXT, got %v", actual)
-		}
+		assert.Equal(t, expectedKey, q.Get("key"), "API key in request should match expected value")
+		assert.Equal(t, "TXT", q.Get("type"), "Record type in request should be TXT")
 
 		cmd := q.Get("cmd")
 		record := q.Get("record")
@@ -80,7 +77,7 @@ func mockHttpResponse(status int, body string, validator func(*http.Request)) *h
 			validator(r)
 		}
 		w.WriteHeader(status)
-		_, err := fmt.Fprintf(w, body)
+		_, err := fmt.Fprint(w, body)
 		if err != nil {
 			panic(err)
 		}
