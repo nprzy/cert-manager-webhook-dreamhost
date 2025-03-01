@@ -23,6 +23,10 @@ _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz: | _test
 _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl: _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz | _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)
 	tar xfO $< kubebuilder/bin/$(notdir $@) > $@ && chmod +x $@
 
+.PHONY: coverage-report
+coverage-report: test
+	$(GO) tool cover -html=./_test/coverage.out -o ./_test/test-coverage.html
+
 .PHONY: clean
 clean:
 	rm -r _test $(OUT)
