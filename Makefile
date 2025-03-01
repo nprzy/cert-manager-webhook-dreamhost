@@ -23,6 +23,16 @@ _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz: | _test
 _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl: _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz | _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)
 	tar xfO $< kubebuilder/bin/$(notdir $@) > $@ && chmod +x $@
 
+GOBIN ?= $$($(GO) env GOPATH)/bin
+
+.PHONY: install-go-test-coverage
+install-go-test-coverage:
+	$(GO) install github.com/vladopajic/go-test-coverage/v2@latest
+
+.PHONY: check-coverage
+check-coverage: test install-go-test-coverage
+	${GOBIN}/go-test-coverage --config=./.testcoverage.yml
+
 .PHONY: coverage-report
 coverage-report: test
 	$(GO) tool cover -html=./_test/coverage.out -o ./_test/test-coverage.html
