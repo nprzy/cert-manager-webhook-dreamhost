@@ -110,7 +110,11 @@ jobs:
 
       - name: diff new and old rendered-manifest.yaml
         if: ${{ steps.download-helm-chart.outputs.found_artifact == 'true' }}
-        run: diff -Nau rendered-manifest.yaml _out/rendered-manifest.yaml > _test/rendered-manifest.yaml.diff
+        run: >
+          diff -Nau rendered-manifest.yaml _out/rendered-manifest.yaml > _test/rendered-manifest.yaml.diff
+            && echo 'No differences'
+            || echo 'Differences detected'
+        continue-on-error: true
 
       - name: upload rendered-manifest.yaml diff
         if: ${{ steps.download-helm-chart.outputs.found_artifact == 'true' }}
