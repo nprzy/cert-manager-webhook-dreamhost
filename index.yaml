@@ -2,6 +2,15 @@ apiVersion: v1
 entries:
   dreamhost-webhook:
   - apiVersion: v1
+    appVersion: 0.2.1
+    created: "2025-03-02T00:39:40.604234712Z"
+    description: Dreamhost DNS-01 solver for Cert Manager
+    digest: f427d9df8df8ade3e79054144cc4f9fe646772dfd205d25302ca25b8469c3eb3
+    name: dreamhost-webhook
+    urls:
+    - https://github.com/nprzy/cert-manager-webhook-dreamhost/releases/download/dreamhost-webhook-0.2.1/dreamhost-webhook-0.2.1.tgz
+    version: 0.2.1
+  - apiVersion: v1
     appVersion: 0.2.0
     created: "2025-02-28T21:28:46.319470475Z"
     description: Dreamhost DNS-01 solver for Cert Manager
@@ -19,4 +28,4 @@ entries:
     urls:
     - https://github.com/nprzy/cert-manager-webhook-dreamhost/releases/download/dreamhost-webhook-0.1.0/dreamhost-webhook-0.1.0.tgz
     version: 0.1.0
-generated: "2025-02-28T21:28:46.319478159Z"
+generated: "2025-03-02T00:39:40.604250982Z"
