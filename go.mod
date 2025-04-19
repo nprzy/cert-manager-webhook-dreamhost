@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/cert-manager/cert-manager v1.17.1
-	github.com/miekg/dns v1.1.63
+	github.com/miekg/dns v1.1.65
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	k8s.io/apiextensions-apiserver v0.32.3
