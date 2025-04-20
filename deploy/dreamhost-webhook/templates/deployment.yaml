@@ -4,21 +4,16 @@ metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount | default 1 }}
   selector:
     matchLabels:
-      app: {{ include "dreamhost-webhook.name" . }}
-      release: {{ .Release.Name }}
+      {{- include "dreamhost-webhook.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: {{ include "dreamhost-webhook.name" . }}
-        release: {{ .Release.Name }}
+        {{- include "dreamhost-webhook.labels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "dreamhost-webhook.fullname" . }}
       containers:

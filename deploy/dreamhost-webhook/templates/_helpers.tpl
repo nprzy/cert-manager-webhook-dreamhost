@@ -46,3 +46,23 @@ Create chart name and version as used by the chart label.
 {{- define "dreamhost-webhook.servingCertificate" -}}
 {{ printf "%s-webhook-tls" (include "dreamhost-webhook.fullname" .) }}
 {{- end -}}
+
+{{/*
+Common labels
+*/}}
+{{- define "dreamhost-webhook.labels" -}}
+helm.sh/chart: {{ include "dreamhost-webhook.chart" . }}
+{{ include "dreamhost-webhook.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "dreamhost-webhook.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "dreamhost-webhook.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}

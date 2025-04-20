@@ -4,10 +4,7 @@ metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 ---
 # Grant the webhook permission to read the ConfigMap containing the Kubernetes
 # apiserver's requestheader-ca-certificate.
@@ -18,10 +15,7 @@ metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}:webhook-authentication-reader
   namespace: kube-system
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -39,10 +33,7 @@ kind: ClusterRoleBinding
 metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}:auth-delegator
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -61,10 +52,7 @@ metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 rules:
 - apiGroups:
     - ''
@@ -84,10 +72,7 @@ metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -104,10 +89,7 @@ kind: ClusterRole
 metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}:domain-solver
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 rules:
   - apiGroups:
       - {{ .Values.groupName }}
@@ -121,10 +103,7 @@ kind: ClusterRoleBinding
 metadata:
   name: {{ include "dreamhost-webhook.fullname" . }}:domain-solver
   labels:
-    app: {{ include "dreamhost-webhook.name" . }}
-    chart: {{ include "dreamhost-webhook.chart" . }}
-    release: {{ .Release.Name }}
-    heritage: {{ .Release.Service }}
+    {{- include "dreamhost-webhook.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
