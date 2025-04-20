@@ -1,5 +1,6 @@
-apiVersion: v1
+apiVersion: v2
 appVersion: "0.2.1"
 description: Dreamhost DNS-01 solver for Cert Manager
 name: dreamhost-webhook
+type: application
 version: 0.2.1
