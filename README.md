@@ -23,7 +23,7 @@ back to cert-manager's documentation. I recommend reading the
     metadata:
       name: dreamhost-api-key
       namespace: cert-manager
-    data:
+    stringData:
       apikey: YOUR_ACCESS_KEY
     ```
 
