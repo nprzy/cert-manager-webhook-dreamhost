@@ -115,3 +115,82 @@ that IP ever changes you may need to update the command.
 ```bash
 $ TEST_API_URL=https://api.dreamhost.com/ TEST_DNS_SERVER=162.159.26.14:53 TEST_ZONE_NAME=subdomain.example.com. make test
 ```
+
+## Releasing
+
+This project uses automated CI/CD via GitHub Actions to build and publish releases. When a version tag
+is pushed, the workflow automatically builds the Docker image, publishes it to GitHub Container Registry,
+and releases the Helm chart.
+
+### Release Process
+
+1. **Update the Helm chart version**
+
+   Edit `deploy/dreamhost-webhook/Chart.yaml` and update both the `version` and `appVersion` fields
+   to the new version number (following [semantic versioning](https://semver.org/)):
+
+   ```yaml
+   apiVersion: v2
+   appVersion: "X.Y.Z"
+   description: Dreamhost DNS-01 solver for Cert Manager
+   name: dreamhost-webhook
+   type: application
+   version: X.Y.Z
+   ```
+
+   Also update the image tag in `deploy/dreamhost-webhook/values.yaml` to match:
+
+   ```yaml
+   image:
+     repository: ghcr.io/nprzy/cert-manager-webhook-dreamhost
+     tag: X.Y.Z
+     pullPolicy: IfNotPresent
+   ```
+
+2. **Commit the version changes**
+
+   ```bash
+   $ git add deploy/dreamhost-webhook/Chart.yaml deploy/dreamhost-webhook/values.yaml
+   $ git commit -m "Bump version to X.Y.Z"
+   ```
+
+3. **Create and push a version tag**
+
+   Create a git tag with the `v` prefix matching the version number:
+
+   ```bash
+   $ git tag vX.Y.Z
+   $ git push origin vX.Y.Z
+   ```
+
+4. **Automated release workflow**
+
+   Once the tag is pushed, the GitHub Actions workflow (`.github/workflows/release.yaml`) will automatically:
+
+   - Run the test suite and generate coverage reports
+   - Build the Docker image and push it to `ghcr.io/nprzy/cert-manager-webhook-dreamhost` with tags:
+     - `vX.Y.Z` (full semantic version)
+     - `X.Y` (major.minor version)
+     - `X` (major version, only for versions >= 1.0.0)
+   - Generate artifact attestations for supply chain security
+   - Release the Helm chart to GitHub releases using [chart-releaser](https://github.com/helm/chart-releaser)
+   - Update the Helm chart repository at `https://nprzy.github.io/cert-manager-webhook-dreamhost`
+
+5. **Verify the release**
+
+   After the workflow completes:
+   - Check the [GitHub Releases page](https://github.com/nprzy/cert-manager-webhook-dreamhost/releases) for the new release
+   - Verify the Docker image is available at `ghcr.io/nprzy/cert-manager-webhook-dreamhost:vX.Y.Z`
+   - Verify the Helm chart can be installed:
+     ```bash
+     $ helm repo update
+     $ helm search repo cert-manager-webhook-dreamhost
+     ```
+
+### Version Numbering Guidelines
+
+Follow [semantic versioning](https://semver.org/) (MAJOR.MINOR.PATCH):
+
+- **MAJOR**: Increment for incompatible API changes or breaking changes
+- **MINOR**: Increment for new functionality in a backwards-compatible manner
+- **PATCH**: Increment for backwards-compatible bug fixes
