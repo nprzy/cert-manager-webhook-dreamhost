@@ -1,6 +1,6 @@
 module github.com/nprzy/cert-manager-webhook-dreamhost
 
-go 1.24.0
+go 1.25.4
 
 require (
 	github.com/cert-manager/cert-manager v1.18.2
