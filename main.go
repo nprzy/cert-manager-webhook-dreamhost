@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/nprzy/cert-manager-webhook-dreamhost/internal/dreamhost"
 	"github.com/pkg/errors"
@@ -116,8 +117,21 @@ func (c *dreamHostDnsProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) erro
 	}
 
 	name := trimTrailingDot(ch.ResolvedFQDN)
-	err = client.DeleteRecord(dreamhost.DNSRecordValue{Name: name, RecordType: "TXT", Value: ch.Key}, "")
+	resp, err := client.DeleteRecord(dreamhost.DNSRecordValue{Name: name, RecordType: "TXT", Value: ch.Key}, "")
 	if err != nil {
+		// If the API indicates the record wasn't found, log a warning and continue.
+		// Check common DreamHost error strings in Data or Reason (case-insensitive).
+		var reason string
+		if resp != nil {
+			reason = strings.ToLower(strings.TrimSpace(resp.Data + " " + resp.Reason))
+		} else {
+			reason = ""
+		}
+		if reason != "" && (strings.Contains(reason, "does_not_exist") || strings.Contains(reason, "record_not_found") || strings.Contains(reason, "not_found") || strings.Contains(reason, "no_records") || strings.Contains(reason, "not exist") || strings.Contains(reason, "no such")) {
+			klog.Warningf("TXT record %v with value %v not found during cleanup: %v", ch.ResolvedFQDN, ch.Key, reason)
+			return nil
+		}
+
 		klog.Errorf("Dreamhost client failed to delete DNS record: %v", err)
 		return errors.Wrapf(err, "Dreamhost client failed to delete DNS record")
 	}

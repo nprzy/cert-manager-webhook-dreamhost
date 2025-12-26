@@ -73,9 +73,9 @@ func (c *DNSClient) CreateRecord(r DNSRecordValue, uniqueId string) error {
 //
 // Example GET request:
 // https://api.dreamhost.com/?key=1A2B3C4D5E6F7G8H&cmd=dns-remove_record&record=example.com&type=TXT&value=test123&format=json&unique_id=123456
-func (c *DNSClient) DeleteRecord(r DNSRecordValue, uniqueId string) error {
+func (c *DNSClient) DeleteRecord(r DNSRecordValue, uniqueId string) (*DreamhostResponse, error) {
 	resp, err := c.sendRequest(&r, "dns-remove_record", uniqueId)
-	return suppressUniqueIdUsedErr(resp, err)
+	return resp, suppressUniqueIdUsedErr(resp, err)
 }
 
 func (c *DNSClient) sendRequest(r *DNSRecordValue, cmd string, uniqueId string) (*DreamhostResponse, error) {
