@@ -75,8 +75,10 @@ func TestDeleteRecord(t *testing.T) {
 	c, err := NewClient(apiKey, nil, svr.URL)
 	assert.Nil(t, err, "expect NewClient err to be nil")
 
-	err = c.DeleteRecord(recordValue, "")
+	resp, err := c.DeleteRecord(recordValue, "")
 	assert.Nil(t, err, "expect DeleteRecord err to be nil")
+	assert.NotNil(t, resp, "expect DeleteRecord response not to be nil")
+	assert.Equal(t, "record_removed", resp.Data, "expect DeleteRecord to return record_removed in Data")
 }
 
 func TestCreateRecordWithUniqueId(t *testing.T) {
