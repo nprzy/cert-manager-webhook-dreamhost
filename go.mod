@@ -3,7 +3,7 @@ module github.com/nprzy/cert-manager-webhook-dreamhost
 go 1.25.4
 
 require (
-	github.com/cert-manager/cert-manager v1.19.1
+	github.com/cert-manager/cert-manager v1.19.2
 	github.com/miekg/dns v1.1.68
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
